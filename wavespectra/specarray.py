@@ -8,20 +8,21 @@ References:
       Journal of Geophysical Research, 80, 2688-2694, doi: 10.1029/JC080i018p02688.
 
 """
+import copy
+import inspect
 import re
+import types
+import warnings
 from collections import OrderedDict
 from datetime import datetime
+from itertools import product
+
 import numpy as np
 import xarray as xr
-import types
-import copy
-from itertools import product
-import inspect
-import warnings
 
-from wavespectra.plot import _PlotMethods
 from wavespectra.core.attributes import attrs
-from wavespectra.core.misc import GAMMA, D2R, R2D
+from wavespectra.core.misc import D2R, GAMMA, R2D
+from wavespectra.plot import _PlotMethods
 
 try:
     from sympy import Symbol
@@ -73,10 +74,8 @@ class SpecArray(object):
 
         # df darray with freq dimension - may replace above one in the future
         if len(self.freq) > 1:
-            dfarr_data = np.hstack((1.0, np.full(len(self.freq) - 2, 0.5), 1.0)) * (
-                np.hstack((0.0, np.diff(self.freq)))
-                + np.hstack((np.diff(self.freq), 0.0))
-            )
+            df = np.diff(self.freq)
+            dfarr_data = 0.5 * (np.hstack((df[0], df)) + np.hstack((df, df[-1])))
         else:
             dfarr_data = np.array((1.0,))
 
@@ -272,8 +271,8 @@ class SpecArray(object):
             - spectra are interpolated at `fmin` / `fmax` if they are not present in self.freq
 
         """
-        assert fmax > fmin if fmax else True, "fmax needs to be greater than fmin"
-        assert dmax > dmin if dmax else True, "fmax needs to be greater than fmin"
+        assert fmax > fmin if fmax and fmin else True, "fmax needs to be greater than fmin"
+        assert dmax > dmin if dmax and dmin else True, "dmax needs to be greater than dmin"
 
         # Slice frequencies
         other = self._obj.sel(freq=slice(fmin, fmax))
@@ -283,11 +282,11 @@ class SpecArray(object):
             other = self._obj.sortby([attrs.DIRNAME]).sel(dir=slice(dmin, dmax))
 
         # Interpolate at fmin
-        if (other.freq.min() > fmin) and (self.freq.min() <= fmin):
+        if (fmin is not None) and (other.freq.min() > fmin) and (self.freq.min() <= fmin):
             other = xr.concat([self._interp_freq(fmin), other], dim=attrs.FREQNAME)
 
         # Interpolate at fmax
-        if (other.freq.max() < fmax) and (self.freq.max() >= fmax):
+        if (fmax is not None) and (other.freq.max() < fmax) and (self.freq.max() >= fmax):
             other = xr.concat([other, self._interp_freq(fmax)], dim=attrs.FREQNAME)
 
         return other
@@ -953,4 +952,3 @@ def hs(spec, freqs, dirs, tail=True):
     if tail and freqs[-1] > 0.333:
         Etot += 0.25 * E[-1] * freqs[-1]
     return 4.0 * np.sqrt(Etot)
-

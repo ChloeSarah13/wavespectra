@@ -12,15 +12,17 @@ Or use the methods on a DataArray or Dataset:
 """
 import functools
 import warnings
+
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.projections import PolarAxes
-
 import xarray as xr
 
+from wavespectra.core.attributes import attrs
+
 try:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    from matplotlib.projections import PolarAxes
     from xarray.plot.facetgrid import _easy_facetgrid
     from xarray.plot.utils import (
         _add_colorbar,
@@ -31,13 +33,11 @@ try:
         _rescale_imshow_rgb,
         _resolve_intervals_2dplot,
         _update_axes,
+        import_matplotlib_pyplot,
+        label_from_attrs,
     )
 except ImportError:
-    warnings.warn("Limited plot capabilities with python2 compatible xarray")
-
-from xarray.plot.utils import import_matplotlib_pyplot, label_from_attrs
-
-from wavespectra.core.attributes import attrs
+    warnings.warn("Some failed imports. Limited plot capabilities")
 
 
 def get_axis(figsize, size, aspect, ax, subplot_kw={}):
